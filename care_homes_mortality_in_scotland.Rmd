@@ -1,0 +1,820 @@
+---
+title: "Care homes and mortality in Scotland"
+output: github_document
+---
+
+
+```{r setup, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(MortalityLaws)
+
+ExFunction <- function(mydf, mylaw = "makeham"){
+  # Fit Makeham Gompertz model then use this to calculate the life expectancy
+  res     <- MortalityLaw(mydf[,"age_m"], Dx = mydf[,"x"], Ex = mydf[,"pt"], law = mylaw)
+  res_tbl <- MortalityLaws::LawTable(x = 70:99, par = res$coefficients, law = mylaw)$lt
+  res_tbl
+}
+
+```
+
+# Background
+
+This analysis was conducted in two stages. First individual-level data was aggregated. THis was done within the Rstudio server at Public Health Scotland. The second stage, shown in this document, was conducted on the aggregated data. This two-stage approach was taken to minimse the risk to privacy, by not sharing the individual data, while still being able to share the aggregate data and code publicly in order to maximise the usefulness and transparency of the work.
+
+# Read data
+
+These are mortality data taken from the CHI-database where an individual is designated as resident in a care home. THe data have been aggregated by month and separately into age, sex and years. One aggregation by year is not in calendar years to allow the most up to date COVID-19 data. The other aggregation is by calendar year for comparison with the National Records for Scotland (NRS) life expectancy estimates. The 2016-2018 NRS life expectancy estimates are also included.
+
+- covid_deaths - counts of COVID-19 deaths including deaths within 28 days of testing positive and/or death following a hospital admission with COVID-19 and/or having COVID-19 as any cause of death on the death certificate. This was taken from the REACT-COVID-19 case-control study.
+- ss_age_sex - sensitivity and specificity of CHI data against UPRN by age and sex
+- ss_hb - sensitivity and specificity of CHI data against UPRN by health board
+- ch_los - lenght of stay within care home (from date of first care home stay to 31st of July 2020. Note large count at [3507,3514] is because this is when the CHI database began to record care home residence
+- ch_deaths_mnths - Monthly deaths overall and by cause. Also includes count of how many were in hospital. Note that covid-19 deaths are included as "respiratory" deaths
+- ch_deaths_15_20 - overall deaths each year from November to October, by age and sex. Also includes count of how many were in hospitalised. Uses an 8 year lookback for care home residence.
+- ch_deaths_16_18 - as above but uses calendar years.
+- le_nr  - age-sex specific life expectancy directly taken from NRS national life tables
+- pop_mort_mnth - includes all deaths for Scotland in 2016-2019 from ages 70 plus
+
+```{r readdata, message = FALSE}
+# covid_deaths    <- read_csv("Data/age_sex_distribution_covid19_deaths_care_homes_private.csv")
+covid_deaths    <- read_csv("Data/age_sex_distribution_covid19_deaths_care_homes_public.csv")
+ss_age_sex      <- read_csv("Data/control_arm_sens_spec_age_sex.csv")
+ss_hb           <- read_csv("Data/control_arm_sens_spec_hb.csv")
+ch_los          <- read_csv("Data/Length of stay at census date of mid-2017 by sex.csv")
+ch_deaths_mnths <- read_csv("Data/monthly_mortality_rates.csv")
+ch_deaths_15_20 <- read_csv("Data/mortality by age and sex 2015 to 2020 November to October.csv")
+ch_deaths_16_18 <- read_csv("Data/mortality by age, sex and calendar year, 2016 to 2018 inclusive.csv")
+le_nrs          <- read_csv("Data/nat-life-tabs-16-18-tab4.csv")
+pop_mort_mnth   <- read_csv("Data/population_mortality_over_70s.csv")
+```
+
+# Proportions of deaths in care homes
+
+## Annual deaths from October 2015 to September 2020
+
+```{r deaths_ch_all, message = FALSE}
+covid_deaths <- covid_deaths %>%  rename(age_yr = age_year)
+
+monthcuts <- list(
+  y1516 = c(
+    "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", 
+    "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01",
+    "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01"),
+  y1617 = c(
+    "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", 
+    "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", 
+    "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01"),
+  y1718 = c(
+    "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", 
+    "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01",
+    "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01"),
+  y1819 = c(
+    "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", 
+    "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01",
+    "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01"),
+  y1920 = c(
+    "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", 
+    "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01",
+    "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01"))
+
+monthcuts_m <- map(monthcuts, ~ paste0(str_sub(.x, 1,4),
+                                       "M",
+                                       str_sub(.x, 6,7)))
+monthcuts <- map(monthcuts, as.Date)
+
+deaths_pop_new <- pop_mort_mnth %>% 
+  mutate(yr = case_when(
+         month_label %in% monthcuts_m$y1516 ~ "2015/16",
+         month_label %in% monthcuts_m$y1617 ~ "2016/17",
+         month_label %in% monthcuts_m$y1718 ~ "2017/18",
+         month_label %in% monthcuts_m$y1819 ~ "2018/19",
+         month_label %in% monthcuts_m$y1920 ~ "2019/20"),
+         sex = if_else(sex ==1, "male", "female")) %>% 
+  group_by(yr, sex) %>% 
+  summarise(pop = sum(deaths)) %>% 
+  ungroup() %>% 
+  filter(!is.na(yr)) %>% 
+  mutate(sex = as.character(sex))
+
+ch_deaths_smry <- ch_deaths_mnths %>% 
+  mutate(yr = case_when(
+         st %in% monthcuts$y1516 ~ "2015/16",
+         st %in% monthcuts$y1617 ~ "2016/17",
+         st %in% monthcuts$y1718 ~ "2017/18",
+         st %in% monthcuts$y1819 ~ "2018/19",
+         st %in% monthcuts$y1920 ~ "2019/20")) %>% 
+  filter(!is.na(yr)) %>% 
+  select(sex, yr, ch = x, ch_h = h) %>% 
+  group_by(sex, yr) %>% 
+  summarise(ch = sum(ch),
+            ch_h = sum(ch_h)) %>% 
+  ungroup() %>% 
+  mutate(sex = if_else(sex ==1, "male", "female"))
+  
+deaths_pop_new2 <- deaths_pop_new %>% 
+  inner_join(ch_deaths_smry) %>% 
+  mutate(`Care home/Total (%)` = paste0(ch, "/", pop," (", round(100*ch/pop, 0), "%)"),
+         `Hospitalised/care home (%)` = paste0(ch_h, "/", ch," (", round(100*ch_h/ch, 0), "%)")) %>% 
+  select(yr, sex, 
+         `Care home/Total (%)`,
+         `Hospitalised/care home (%)`) %>% 
+  mutate(sex = if_else(sex == "male", "Men", "Women")) %>% 
+  arrange(sex) %>% 
+  select(Sex = sex, Period = yr, everything())
+deaths_pop_new2 %>% knitr::kable()
+
+
+```
+
+# By month for all years
+
+```{r bymonth}
+bymonthpop <- pop_mort_mnth %>% 
+  mutate(cal_cut = str_replace(month_label, "M", ".")  %>% as.double()) %>% 
+  mutate(cal_month = paste0(str_replace(month_label, "M", "-"), "-01") %>% as.Date(),
+         sex = if_else(sex ==1, "male", "female")) %>% 
+  group_by(cal_month, sex) %>% 
+  summarise(pop_deaths = sum(deaths)) %>% 
+  ungroup() 
+bymonthch  <- ch_deaths_mnths %>% 
+  rename(cal_month = st) %>% 
+  group_by(sex, cal_month) %>% 
+  summarise(ch_deaths = sum(x)) %>% 
+  ungroup() %>% 
+  mutate(sex = if_else(sex ==1, "male", "female"))
+bymonth <- bymonthpop %>% 
+  right_join(bymonthch) %>% 
+  mutate(prcnt_ch = round(100*ch_deaths/(pop_deaths)),
+         res = paste0(ch_deaths, " (", prcnt_ch, "%)"),
+         year = lubridate::year(cal_month)) %>% 
+  select(cal_month, sex, res, year) %>% 
+  mutate(cal_month = lubridate::month(cal_month)) %>% 
+  spread(year, res) %>% 
+  arrange(sex, cal_month)
+bymonth %>% 
+  knitr::kable()
+  
+```
+
+
+# Length of stay
+
+```{r calcmed}
+ch_los %>% 
+  arrange(sex, los_m) %>% 
+  group_by(sex) %>% 
+  mutate(cum_prop = cumsum(n)/sum(n)) %>% 
+  filter(cum_prop >=0.5) %>% 
+  slice(1) %>% 
+  mutate(medn = los_m/365.25)
+```
+
+
+# Drop aged 100 and older and label sex variable for life expectancy comparisons
+
+```{r dropage}
+ch_deaths_16_18 <- ch_deaths_16_18 %>% 
+  filter(age_yr != "ge100") %>% 
+  mutate(age_yr = as.double(age_yr),
+         sex = if_else(sex ==1, "male", "female"))
+ch_deaths_15_20 <- ch_deaths_15_20 %>% 
+  filter(age_yr != "ge100") %>% 
+  mutate(age_yr = as.double(age_yr),
+         sex = if_else(sex ==1, "male", "female"))
+ch_deaths_mnths <- ch_deaths_mnths %>% 
+  mutate(sex = if_else(sex ==1, "male", "female"))
+ch_los <- ch_los %>% 
+    mutate(sex = if_else(sex ==1, "male", "female")) %>% 
+  select(-sex_f)
+
+```
+
+# Number of individuals
+```{r agedist}
+## add age distribution in 2017
+age2017 <- ch_deaths_16_18 %>% 
+  filter(cal_yr == 2017) %>% 
+  select(age_yr, sex, N) %>% 
+  group_by(sex) %>% 
+  mutate(prcnt = N/sum(N)) %>% 
+  ungroup() %>% 
+  mutate(comparison = "Care home resident")
+
+sex2017 <- age2017 %>% 
+  group_by(sex) %>% 
+  summarise(N = sum(N)) %>% 
+  ungroup() %>% 
+  mutate(pop = c (402653, 304848))
+sex2017<- sex2017 %>% 
+  mutate(res = paste0(N, "/", pop, " (", round(100*N/pop), "%)"))
+sex2017_N <- as.list(sex2017$N)
+sex2017_res <- as.list(sex2017$res)
+names(sex2017_N) <- sex2017$sex
+names(sex2017_res) <- sex2017$sex
+rm(sex2017)
+
+```
+
+
+The CHI database contains only an incomplete record of care homes and includes only `r as.character(sex2017_N$female)` women and `r as.character(sex2017_N$male)` men. Despite this, deaths among care home residents accounted for a substantial proportion of COVID-19 deaths overall.
+
+# Duration of stay for care home residents
+
+```{r startchi}
+a <- ch_los %>% 
+  arrange(desc(los_m)) %>% 
+  slice(1) %>% 
+  pull(los_m) 
+a <- as.Date("2017-07-31") - a
+```
+
+The following plot shows the duration of stay in care homes. This was assessed for all individuals resident in a care home on the 31st of July 2017 (the mid-point of the 2016-2018 period for which life expectancy was calculated). The large spike at 9-years corresponds to `r a`, which is when care home status began to be recorded on the CHI database and all current residents were added (a large prevalent pool). For this reason, all subsequent analyses employ an 8-year lookback to exclude this date. This means that the (from the figure presumably small) number of care home residents who have been in a care home for more than 8 years are not included in these analyses.
+
+## Figure - Duration of stay
+```{r los}
+plot1 <- ggplot(ch_los, aes(x = 12*los_m/365.25, y = 100*prcnt, colour = sex, fill = sex)) +
+  geom_col() +
+  scale_x_continuous("Months since first resident in care home",
+                     breaks = seq(0, 120, 12)) +
+  scale_y_continuous("Percentage of residents")
+plot1
+```
+
+
+
+# Length of stay as cumulative plot
+
+```{r cumlos}
+los_each_time_period <- ch_los %>% 
+  group_by(sex) %>% 
+  mutate(cum_prcnt = cumsum(prcnt),
+         cum_prcnt = cum_prcnt/max(cum_prcnt)) %>% 
+  ungroup() 
+plot1_cum <- ggplot(los_each_time_period, aes(x = 12*los_m/365.25, y = 100*cum_prcnt, colour = sex, fill = sex, group = sex)) +
+  geom_step() +
+  scale_x_continuous("Months since first resident in care home",
+                     breaks = seq(0, 120, 12)) +
+  scale_y_continuous("Percentage of residents")
+plot1_cum
+
+```
+
+
+# Mortality trends
+
+The following plot shows monthly mortality rates per person-year. The person time and deaths were counted if an individual was a care home resident during at least part of the relevant month.
+
+## Figure - Mortality each month
+
+```{r morttrends, message = FALSE}
+ch_deaths_mnths_lng <- ch_deaths_mnths %>% 
+  filter(st <= as.Date("2020-10-01")) %>% 
+  mutate(cod_other = x - (cod_cancer + cod_dementia + cod_circ+cod_resp)) %>% 
+  rename(cod_all_cause = x) %>% 
+  gather("cause", "death", cod_all_cause, cod_cancer, cod_dementia, cod_circ, cod_resp, cod_other, cod_covid) %>% 
+  mutate(rate = death/pt)
+
+ch_deaths_mnths_cvd <- ch_deaths_mnths_lng %>% 
+  filter(cause == "cod_covid", st >= as.Date("2020-02-01"))
+ch_deaths_mnths_lng <- ch_deaths_mnths_lng %>% 
+  filter(!cause == "cod_covid")
+plottrend_by_cause <- ggplot(ch_deaths_mnths_lng %>% 
+                               filter(!cause %in% c("cod_all_cause")) %>% 
+                               mutate(cause = str_replace(cause, "cod_", "") %>% str_to_title(),
+                                      sex = if_else(sex == "male", "Men", "Women"),
+                                      cause = factor(cause,
+                                                     levels = c("Resp",
+                                                                "Dementia",
+                                                                "Circ",
+                                                                "Cancer",
+                                                                "Other"),
+                                                     labels = c("Respiratory\n(incld. COVID-19)",
+                                                                "Dementia",
+                                                                "Circulatory",
+                                                                "Cancer",
+                                                                "Other"))), 
+                             aes(x = st, y = rate, colour = cause)) + 
+  geom_line() +
+  geom_line(data = ch_deaths_mnths_cvd %>% 
+              mutate(sex = if_else(sex == "male", "Men", "Women")), mapping = aes(x = st, y = rate), colour = "black", size = 0.5, linetype = "dashed") +
+  facet_wrap(~ sex) +
+  scale_x_date("Date") +
+  scale_y_continuous("Mortality rate (events per person-year)") +
+  scale_linetype(guide = FALSE)
+  
+pop_mort2 <- pop_mort_mnth %>% 
+  filter(hb == "Scotland") %>% 
+  mutate(st = paste0(str_replace(month_label, "M", "-"), "-01") %>% as.Date(),
+         sex = if_else(sex == 1, "Men", "Women"),
+         cause = "cod_all_cause") %>%
+  select(st, sex, cause, deaths, pats) %>% 
+  filter(st >= min(ch_deaths_mnths_lng$st))
+pop_mort2 <- ch_deaths_mnths_lng %>%
+                        select(st, sex, cause, ch_deaths = death, chpt = pt) %>% 
+  mutate(sex = if_else(sex == "male", "Men", "Women")) %>% 
+  left_join(pop_mort2) %>% 
+  mutate(deaths = deaths - ch_deaths,
+         pats = pats - chpt,
+         rate = deaths/(pats/12)) %>%
+    select(st, sex, cause, rate)
+
+ch_deaths_mnths_lng2 <- ch_deaths_mnths_lng %>%
+                        select(st, sex, cause, rate)
+pop_mort2 <- bind_rows(pop = pop_mort2,
+                      ch = ch_deaths_mnths_lng2,
+                      .id = "residency")
+
+plottrendspop <- ggplot(pop_mort2 %>% 
+                          filter(cause == "cod_all_cause", st >= min(ch_deaths_mnths_lng$st)) %>% 
+                          mutate(sex = if_else(sex %in% c("male", "Men"), "Men", "Women" )),
+                      aes(x = st, y = rate, colour = sex, shape = residency, linetype = residency)) +
+  geom_line() +
+  scale_linetype(guide = FALSE) +
+  scale_x_date("Date") +
+  scale_y_continuous("Mortality rate (events per person-year)") 
+```
+
+
+## Mortality in care home residents versus the general SCottish population
+
+```{r mortpop}
+tiff("Plots/all_cause_trends.tiff", res = 300, compression = "lzw", width = 8, height = 6, units = "in")
+plottrendspop
+dev.off()
+plottrendspop
+```
+
+## Mortality by cause among care home residents
+
+```{r mortcod}
+tiff("Plots/by_cause_trends.tiff", res = 300, compression = "lzw", width = 10, height = 6, units = "in")
+plottrend_by_cause + scale_color_discrete("")
+dev.off()
+plottrend_by_cause
+```
+COVID-19 deaths are overlaid as a dashed black line.
+
+
+# Estimate LE for 2016-2018 using parametric models and standard life table for men and women 
+The following figure shows the life expectancy in care home residents during 2016-2018 compared to the Scottish population aged 70 years and older. The latter is directly taken from the National Records Scotland life tables for this period and so includes people resident in care homes. The points show standard life table based estimates and the lines represent estimates from Makeham-Gompertz models. There are no lines for the population comparison as we did not fit a model to these points. The areas indicate the proportion of men and women resident in care homes at each age in 2017.
+
+The much higher mortality in care home residents, compared to the general population, is clear.
+
+## Figure - life expectancy in care home residents and the general Scottish population
+
+```{r le201618par, warning = FALSE}
+## collapse into a single year from multiple calendar years
+ch_deaths_16_18_nst <- ch_deaths_16_18 %>% 
+  group_by(age_m, sex) %>% 
+  summarise_at(vars(x,pt), sum) %>% 
+  ungroup() %>% 
+  group_by(sex) %>% 
+  nest()
+## Convert to matrix for passing to function
+ch_deaths_16_18_nst$data <- map(ch_deaths_16_18_nst$data, as.matrix)
+## Fit parametric models
+ch_deaths_16_18_nst$para <- map(ch_deaths_16_18_nst$data, ~ ExFunction(.x) %>% 
+                                  select(x, ex) %>% 
+                                  mutate(x = x+69))
+## Fit standard life table and convert age so on same scale
+ch_deaths_16_18_nst$trad <- map(ch_deaths_16_18_nst$data, ~
+                                  LifeTable(.x[,"age_m"], Dx = .x[, "x"], Ex = .x[, "pt"])$lt %>%  
+                                  select(x, ex))
+## Cmpr_plts
+ch_deaths_16_18_nst$cmpr <- map2(ch_deaths_16_18_nst$para, ch_deaths_16_18_nst$trad, function(para, trad){
+  bind_rows(para = para,
+            trad = trad,
+            .id = "method")
+})
+
+cmpr_line <- ch_deaths_16_18_nst %>% 
+  select(sex, cmpr) %>% 
+  unnest(cmpr) %>% 
+  spread(method, ex) 
+
+le_nrs_cmpr <- le_nrs %>% 
+  filter(x >= 70) %>% 
+  gather("sex", "trad", female, male)
+cmpr_line2 <- bind_rows(`Care home resident`  = cmpr_line,
+                       `Total population` = le_nrs_cmpr,
+                       .id = "comparison")
+
+plot_cmpr <- ggplot(cmpr_line2 %>% 
+                      ungroup() %>% 
+                      mutate(sex = if_else(sex == "male", "Men", "Women")), aes(x = x, y = para, group = interaction(sex, comparison),
+                                   shape = comparison)) + 
+  geom_line() +
+  geom_point(mapping= aes(y = trad)) +
+  scale_x_continuous("Age (years)") +
+  scale_y_continuous("Life expectancy (years)") +
+  scale_color_discrete("") +
+  scale_shape("")  +
+  geom_area(data = age2017 %>% 
+                      mutate(sex = if_else(sex == "male", "Men", "Women")),
+          mapping = aes(x = age_yr, y = 15*prcnt, shape = comparison),
+          alpha = 0.1, colour = NA) +
+  facet_wrap(~sex)
+tiff("Plots/le_ch_vs_pop.tiff", res = 300, compression = "lzw", width = 10, height = 6, units = "in")
+plot_cmpr
+dev.off()
+plot_cmpr
+```
+
+# Life expectancy each calendar year
+
+We also used the Gompertz-Makeham parametric model (which was a reasonable fit to the life table based life expectancies) to estimate life expectancy each year. As with the all-age comparison this was done using an 8-year lookback period. The areas on the plots represent the age-distribution in 2017 for men and women.
+
+## Figure Life expectancy by age, sex and year from November to October
+
+```{r lebyyearplot}
+## Nest by calendar year and sex
+le_yrs <- ch_deaths_15_20
+le_yrs <- le_yrs %>% 
+  group_by(cal_yr, sex) %>% 
+  nest()
+## estimate life expectancy for each year
+le_yrs$les <- map(le_yrs$data, ~ ExFunction(.x %>% select(age_m, x, pt) %>% as.matrix()))
+le_yrs$les2 <- map(le_yrs$les, ~ .x %>% 
+                     mutate(x = x+69) %>% 
+                     select(x, ex))
+le_yrs <- le_yrs %>% 
+  select(cal_yr, sex, les2) %>% 
+  unnest(les2) %>% 
+  ungroup() %>% 
+  mutate(cal_yr = paste0(as.character(cal_yr), "/", as.integer(str_sub(cal_yr, 3,4))+1))
+# Plot estimates without 95 % confidence intervals
+cmpr_le <- ggplot(le_yrs %>% 
+                    mutate(sex = if_else(sex == "male", "Men", "Women")), 
+                  aes(x = x, y = ex, colour = cal_yr, group = cal_yr)) + 
+  geom_line() +
+  facet_wrap(~sex) +
+  scale_x_continuous("Age (years)") +
+  scale_y_continuous("Life expectancy (years)") +
+  scale_color_discrete("") +
+  geom_area(data = age2017 %>% mutate(cal_yr = 2017,
+                                      sex = if_else(sex == "male", "Men", "Women")),
+          mapping = aes(x = age_yr, y = 15*prcnt, colour = cal_yr, group = cal_yr),
+          alpha = 0.5, fill = "grey", colour = "grey")
+
+
+cmpr_le
+
+
+```
+
+## Calculate life expectancy based on age distribution in 2017 for each year
+
+Calculate the mean life expectancy based on the 2017 age distribution, for each sex.
+
+```{r lebyyearplotsmry, message =FALSE}
+age2017_smry <- age2017 %>% 
+  select(sex, age_yr, N) %>% 
+  group_by(sex, age_yr) %>% 
+  summarise(N = sum(N)) %>% 
+  group_by(sex) %>% 
+  mutate(W = N/sum(N),
+         x = as.double(age_yr)) %>% 
+  select(sex, x, W)  %>% 
+  ungroup() %>% 
+  filter(!is.na(x))
+
+le_yrs <- le_yrs %>% 
+  inner_join(age2017_smry)
+
+le_yrs_smry <- le_yrs %>% 
+  group_by(cal_yr, sex) %>% 
+  summarise(ex_overall = weighted.mean(ex, W)) %>% 
+  ungroup() 
+
+le_yrs_smry <- le_yrs_smry %>% 
+  arrange(cal_yr) %>% 
+  group_by(sex) %>% 
+  mutate(ex_diff = ex_overall[1] - ex_overall) %>% 
+  ungroup() %>% 
+  mutate(ex_diff_months = 12 * ex_diff)
+
+le_yrs_smry %>% 
+  select(`calendar year ` = cal_yr, sex, ex_overall) %>% 
+  mutate(ex_overall = round(ex_overall, 1)) %>% 
+  spread(sex, ex_overall) %>% 
+  knitr::kable()
+
+```
+
+
+## Uncertainty intervals for life expectancy
+
+The following generates uncertainty intervals for the above by sampling from a binomial distribution. This takes a long time to run so is saved as an R data object (Rds) the first time it is run. To run the sampling again either delete or rename the file or else modify the code to remove the conditional statement.
+
+```{r lewithuncertainty, message = FALSE}
+SampleDistributionsLong <- function(mydf, N_iters = 1000){
+  ## Generate samples from distribution to get counts of deaths
+  mydf$smpls <- map2(mydf$N, mydf$x/mydf$N, ~ data.frame (iter = 1:N_iters, x = rbinom(N_iters, size = .x, prob = .y)))
+  ## Take mean and standard deviations
+  # mydf$smpls_m <- map_dbl(mydf$smpls, ~ mean(.x$x))
+  # mydf$smpls_s <- map_dbl(mydf$smpls, ~ sd(.x$x))
+  
+  ## group by iteration
+  mydf_iters <- mydf %>% 
+    select(age_m, smpls, pt) %>% 
+    unnest(smpls) %>% 
+    arrange(iter) %>% 
+    group_by(iter) %>% 
+    nest() %>% 
+    ungroup()
+  mydf_iters
+}
+if(!file.exists("scratch_data_samples.Rds")) {
+  le_yrs_ui <- ch_deaths_15_20
+  le_yrs_ui <- le_yrs_ui %>% 
+    group_by(cal_yr, sex) %>% 
+    nest()
+  ## generate samples for each year and sex
+  le_yrs_ui$smpls <- map(le_yrs_ui$data, ~ SampleDistributionsLong(.x))
+  
+  ## re-nest by calendar year, sex and iteration
+  le_yrs_ui <- le_yrs_ui %>% 
+    select(-data) %>% 
+    unnest(smpls) %>% 
+    unnest(data)
+  le_yrs_ui <- le_yrs_ui %>%
+    group_by(cal_yr, sex, iter) %>% 
+    nest()
+  le_yrs_ui$data <- map(le_yrs_ui$data, as.matrix)
+  
+  ## apply LE calculator to samples
+  le_yrs_ui$le <- map(le_yrs_ui$data, ExFunction)
+  
+  ## unnest and then re-nest by iteration
+  le_yrs_ui <- le_yrs_ui %>% 
+    select(-data) %>% 
+    unnest(le) %>% 
+    select(cal_yr, sex, iter, x, ex)
+  
+  saveRDS(le_yrs_ui, "scratch_data_samples.Rds")
+} else le_yrs_ui <- readRDS("scratch_data_samples.Rds")
+
+# obtain upper and lower estimates for each calendar year, sex and age
+# revisit these and make sure reasonable to summarise across ages from different models
+# alternative would be to take quantiles for average LE and select the age-specific ones coresponding 
+# to these
+le_yrs_ui_smry <- le_yrs_ui %>% 
+  mutate(x = x + 69) %>% 
+  select(cal_yr, sex, iter, x, ex) %>% 
+  group_by(cal_yr, sex, x) %>% 
+  summarise(lci = quantile(ex, probs = 0.025),
+            uci = quantile(ex, probs = 0.975)) %>% 
+  ungroup() %>% 
+  mutate(cal_yr = paste0(as.character(cal_yr), "/", as.integer(str_sub(cal_yr, 3,4))+1))
+
+le_yrs_ui_smry <- le_yrs %>% 
+  inner_join(le_yrs_ui_smry)
+
+cmpr_le <- ggplot(le_yrs_ui_smry %>% 
+                    mutate(sex = if_else(sex == "male", "Men", "Women")),
+                  aes(x = x, y = ex, ymin = lci, ymax = uci,
+                              colour = cal_yr, fill = cal_yr, group = cal_yr)) + 
+  geom_line() +
+  geom_ribbon(alpha = 0.3, colour = NA) + 
+  facet_wrap(~sex)+
+  scale_x_continuous("Age (years)") +
+  scale_y_continuous("Life expectancy (years)") +
+  scale_fill_discrete("") +
+  scale_color_discrete("") +
+  geom_area(data = age2017 %>% 
+              mutate(cal_yr = 2017, lci = NA_real_, uci = NA_real_,
+                     sex = if_else(sex == "male", "Men", "Women")),
+          mapping = aes(x = age_yr, y = 15*prcnt, colour = cal_yr, group = cal_yr),
+          alpha = 0.5, fill = "grey", colour = "grey")
+tiff("Plots/le_ch_trend.tiff", res = 300, compression = "lzw", width = 10, height = 6, units = "in")
+cmpr_le
+dev.off()
+cmpr_le
+```
+
+
+## Summary statistics for life expectancy and difference in life expectancy
+
+```{r lecalyrsmry}
+le_yrs_ui <- le_yrs_ui %>% 
+  ungroup() 
+le_yrs_ui_2015 <- le_yrs_ui %>% 
+  filter(cal_yr == 2015) %>% 
+  select(-cal_yr) %>%
+  rename(ex2015 = ex)
+le_yrs_ui_2015 <- le_yrs_ui %>% 
+  inner_join(le_yrs_ui_2015) %>% 
+  mutate(exrel = ex2015 - ex) %>% 
+  select(-ex2015)
+
+le_yrs_ui_2015 <- le_yrs_ui_2015 %>% 
+  mutate(x = x+69) %>% 
+  inner_join(le_yrs %>% distinct(sex, x, W))
+
+le_yrs_ui_2015_smry <- le_yrs_ui_2015 %>% 
+  group_by(cal_yr, sex, iter) %>% 
+  summarise(ex = weighted.mean(ex, W),
+            exrel = weighted.mean(exrel, W)) %>% 
+  ungroup()
+
+le_yrs_ui_2015_smry <- le_yrs_ui_2015_smry %>% 
+  group_by(cal_yr, sex) %>% 
+  summarise_at(vars(ex, exrel), .funs = list(
+    lci = function(x) quantile(x, 0.025),
+    uci = function(x) quantile(x, 0.975))) %>% 
+  ungroup()
+le_yrs_ui_2015_smry <- le_yrs_ui_2015_smry %>% 
+  mutate(cal_yr = paste0(as.character(cal_yr), "/", as.integer(str_sub(cal_yr, 3,4))+1)) %>% 
+  inner_join(le_yrs_smry %>% 
+  select(cal_yr, sex, ex_est = ex_overall, exrel_est = ex_diff))
+le_yrs_ui_2015_smry <- le_yrs_ui_2015_smry %>% 
+  gather("tosep", "value", -cal_yr, -sex)
+le_yrs_ui_2015_smry <- le_yrs_ui_2015_smry %>% 
+  separate("tosep", into = c("abs_rel", "measure"), sep = "_")
+le_yrs_ui_2015_smry <- le_yrs_ui_2015_smry %>% 
+  mutate(value = round(value, 2) %>% formatC(digits = 2, format = "f")) %>% 
+  spread(measure, value)
+le_yrs_ui_2015_smry <- le_yrs_ui_2015_smry %>% 
+  mutate(res = paste0(est, " (", lci, "-", uci, ")")) %>% 
+  select(cal_yr, sex, abs_rel, res)
+
+le_yrs_ui_2015_smry %>% 
+  spread(cal_yr, res) %>% 
+  mutate(abs_rel = if_else(abs_rel == "ex", "Absolute", "Difference from 2015"),
+         sex = str_to_title(sex)) %>% 
+  arrange(abs_rel, sex) %>% 
+  rename(`Life expectancy` = abs_rel, Sex = sex) %>% 
+  knitr::kable()
+```
+
+## Years of life lost
+
+By applying the observed ages at death for men and women whose death met the COVID-19 definition used in the case control study (descrived above) to the 2016-2018 life expectancy estimates we can also estimate the "years of life lost" among those who died from COVID-19 who were and were not residents of care homes. We can also compare the estimates of the YLL when we do and do not account for care home residency.
+
+```{r yllcarehome}
+## summarise deaths for linking to LE
+covid_deaths2 <- covid_deaths %>% 
+  select(-in_ch_chi, -in_ch_uprn) %>% 
+  group_by(age_yr, hosptlsd, carehome) %>% 
+  summarise_at(vars(female, male), sum) %>% 
+  ungroup() %>% 
+  gather("sex", "deaths", female, male) %>% 
+  rename(x = age_yr) %>% 
+  select(x, sex, carehome, deaths) %>% 
+  group_by(x, sex, carehome) %>% 
+  summarise(deaths = sum(deaths)) %>% 
+  ungroup() %>% 
+  mutate(carehome = if_else(carehome == "care home", "ch", "not")) 
+
+covid_deaths2 <- expand.grid(x = 1:99, sex = c("female", "male")) %>% 
+  left_join(covid_deaths2) %>% 
+  mutate(deaths   = if_else(is.na(deaths), 0, deaths),
+         carehome = if_else(is.na(carehome), "not", carehome)) %>% 
+  arrange(sex, x, carehome) %>% 
+  group_by(sex, x, carehome) %>% 
+  summarise(deaths = sum(deaths)) %>% 
+  ungroup() %>% 
+  spread(carehome, deaths, fill = 0)
+
+# Select life expectancy data for niave calculation ignoring care home
+le_n_ch <- le_nrs %>% 
+  gather("sex", "tot_pop_le", -x) 
+# le_n_ch <- bind_rows(le_n_ch,)
+covid_deaths2 <- covid_deaths2 %>% 
+  left_join(le_n_ch)
+
+# Select life expectancy data for care home and non care home
+le_w_ch <- cmpr_line2 %>% 
+  ungroup() %>% 
+  filter(x >=70, comparison == "Care home resident") %>% 
+  select(sex, x, ch_le = para)
+covid_deaths2 <- covid_deaths2 %>% 
+  left_join(le_w_ch)
+
+# Get total deaths and convert carehome home deaths before the age of 70 into non-care home deaths
+covid_deaths2 <- covid_deaths2 %>% 
+  mutate(tot = ch + not,
+         ch = if_else(x <70, 0, ch),
+         not = if_else(x <70, tot, not)) %>% 
+  select(sex, x, ch, not, tot, ch_le, tot_pop_le)
+if(!all(covid_deaths2$ch + covid_deaths2$not == covid_deaths2$tot)) warning("error in calculations")
+
+## Summarise LE overall IGNORING CARE HOME LE but using Care home ages
+le_overall <- covid_deaths2 %>% 
+  group_by(sex) %>% 
+  summarise(le_tot = weighted.mean(tot_pop_le, tot),
+            le_ch = weighted.mean(tot_pop_le, ch),
+            le_not = weighted.mean(tot_pop_le, not),
+            tot = sum(tot),
+            ch = sum(ch),
+            not = sum(not)) %>% 
+  ungroup() %>% 
+  mutate(agegrp = "Total")
+
+## Summarise LE by age GNORING CARE HOME LE but using Care home ages
+## note use tot le for all three but weight by care home status
+le_by_age<- covid_deaths2 %>%
+  mutate(agegrp = case_when(x>=70 ~ "70+",
+                            x >=60 ~ "60-69",
+                            x >=50 ~ "50-59",
+                            TRUE ~ "<50")) %>% 
+  group_by(sex, agegrp) %>% 
+  summarise(le_tot = weighted.mean(tot_pop_le, tot),
+            le_ch = weighted.mean(tot_pop_le, ch),
+            le_not = weighted.mean(tot_pop_le, not),
+            tot = sum(tot),
+            ch = sum(ch),
+            not = sum(not)) %>% 
+  ungroup()
+
+# compare le among those 70 and older in care homes and not
+over70_niave <- covid_deaths2 %>% 
+  filter(x >=70) %>% 
+  group_by(sex) %>% 
+  summarise(le_tot = weighted.mean(tot_pop_le, tot),
+            le_ch = weighted.mean(tot_pop_le, ch),
+            le_not = weighted.mean(tot_pop_le, not),
+            tot = sum(tot),
+            ch = sum(ch),
+            not = sum(not)) %>% 
+  ungroup() 
+
+# compare le among those 70 and older in care homes and not
+over70_niave <- covid_deaths2 %>% 
+  filter(x >=70) %>% 
+  group_by(sex) %>% 
+  summarise(le_tot = weighted.mean(tot_pop_le, tot),
+            le_ch = weighted.mean(tot_pop_le, ch),
+            le_not = weighted.mean(tot_pop_le, not),
+            tot = sum(tot),
+            ch = sum(ch),
+            not = sum(not)) %>% 
+  ungroup()  %>% 
+  mutate(le_tot_test = (le_ch*ch + le_not * not)/tot ) 
+
+over70_respect <- covid_deaths2 %>% 
+  filter(x >=70) %>% 
+  group_by(sex) %>% 
+  summarise(le_ch = weighted.mean(ch_le, ch),
+            le_not = weighted.mean(tot_pop_le, not),
+            tot = sum(tot),
+            ch = sum(ch),
+            not = sum(not)) %>% 
+  ungroup() %>% 
+  mutate(le_tot = (le_ch*ch + le_not * not)/tot )
+
+
+over70 <- bind_rows(`NRS solely` = over70_niave %>% 
+                      select(-le_tot_test), 
+                    `NRS and care home` = over70_respect, .id = "le_used")
+
+over70_print <- over70 %>% 
+  mutate(sex = str_to_title(sex),
+         yll_tot = round(le_tot * tot),
+         yll_ch = round(le_ch * ch),
+         yll_not = round(le_not * not)) %>%  
+  mutate_at(vars(le_tot, le_ch, le_not), ~ .x %>% 
+              round(2) %>% 
+              formatC(digits = 2, format = "f")) %>% 
+    mutate_at(vars(yll_tot, yll_ch, yll_not), ~ .x %>% 
+              round(0) %>% 
+              formatC(format = "d"))  %>% 
+  select(sex, le_used,
+         ch, not, tot,
+         le_ch, le_not, le_tot,
+         yll_ch, yll_not, yll_tot) %>% 
+  arrange(sex) 
+
+names(over70_print) <- names(over70_print) %>% 
+  str_replace("le_used", "Life expectancy used") %>% 
+  str_replace("sex", "Sex") %>% 
+  str_replace("^ch$", "N Care home") %>% 
+  str_replace("^not$", "N Not care home") %>% 
+  str_replace("^tot$", "N Overall") %>% 
+  str_replace("ch$", "Care home") %>% 
+  str_replace("not$", "Not care home") %>% 
+  str_replace("tot$", "Overall") %>% 
+  str_replace("^le_", "Average YLL ") %>% 
+  str_replace("^yll_", "Total YLL ")
+
+over70_print %>% knitr::kable()
+over70_print %>% t() %>%  write.csv("clipboard")
+```
+
+## UPRN and CHI agreement
+
+The control arm of the case control study is effectively an age-sex-GP practice stratified random sample of the Scottish population during the pandemic. Using these data we examined the sensitivity and specificity of the care home CHI flag against the UPRN care home flag, treating the latter as a gold standard. The sensitivity and specificity were very high across both categories.
+
+
+### Sensitivity and Specificity by age in years and sex
+```{r ssage}
+ss_age_sex %>% 
+  knitr::kable()
+```
+
+### Sensitivity and Specificity by health board
+```{r sshb}
+ss_hb %>% 
+  knitr::kable()
+```
+

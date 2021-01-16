@@ -1,0 +1,293 @@
+age_year,hosptlsd,carehome,in_ch_chi,in_ch_uprn,female,male
+34,hospitalised,not care home,0,0,1,0
+36,hospitalised,not care home,0,0,1,0
+39,not hospitalised,not care home,0,0,0,1
+40,hospitalised,not care home,0,0,1,1
+43,hospitalised,not care home,0,0,1,2
+44,hospitalised,not care home,0,0,0,1
+44,not hospitalised,not care home,0,0,0,1
+45,hospitalised,not care home,0,0,1,1
+45,not hospitalised,not care home,0,0,0,2
+46,hospitalised,care home,1,1,0,1
+46,hospitalised,not care home,0,0,0,1
+46,not hospitalised,not care home,0,0,0,1
+47,hospitalised,not care home,0,0,2,2
+47,not hospitalised,not care home,0,0,1,0
+48,hospitalised,not care home,0,0,1,3
+48,not hospitalised,not care home,0,0,1,0
+49,hospitalised,not care home,0,0,1,4
+50,hospitalised,not care home,0,0,5,2
+51,hospitalised,not care home,0,0,3,2
+51,not hospitalised,not care home,0,0,1,1
+52,hospitalised,not care home,0,0,2,5
+52,not hospitalised,not care home,0,0,0,4
+53,hospitalised,care home,1,1,0,1
+53,hospitalised,not care home,0,0,4,5
+53,not hospitalised,not care home,0,0,0,3
+54,hospitalised,care home,1,1,0,1
+54,hospitalised,not care home,0,0,6,10
+54,not hospitalised,care home,1,1,1,1
+54,not hospitalised,not care home,0,0,1,1
+55,hospitalised,not care home,0,0,3,8
+55,not hospitalised,not care home,0,0,0,1
+56,hospitalised,care home,1,1,1,1
+56,hospitalised,not care home,0,0,4,10
+56,not hospitalised,care home,1,1,1,0
+56,not hospitalised,not care home,0,0,0,4
+57,hospitalised,care home,1,1,0,1
+57,hospitalised,not care home,0,0,4,14
+57,not hospitalised,not care home,0,0,0,1
+58,hospitalised,care home,1,1,0,2
+58,hospitalised,not care home,0,0,6,13
+58,not hospitalised,not care home,0,0,1,3
+59,hospitalised,not care home,0,0,6,16
+59,not hospitalised,care home,1,1,0,1
+59,not hospitalised,not care home,0,0,2,4
+60,hospitalised,care home,1,1,0,2
+60,hospitalised,not care home,0,0,8,11
+60,not hospitalised,care home,1,1,1,2
+60,not hospitalised,not care home,0,0,2,3
+61,hospitalised,not care home,0,0,13,17
+61,not hospitalised,care home,1,1,0,1
+61,not hospitalised,not care home,0,0,2,1
+62,hospitalised,care home,1,1,2,0
+62,hospitalised,not care home,0,0,12,26
+62,not hospitalised,care home,1,1,2,0
+62,not hospitalised,not care home,0,0,4,2
+63,hospitalised,care home,1,1,1,4
+63,hospitalised,not care home,0,0,10,26
+63,not hospitalised,care home,1,1,2,1
+63,not hospitalised,not care home,0,0,6,6
+64,hospitalised,care home,1,1,0,2
+64,hospitalised,not care home,0,0,15,33
+64,not hospitalised,care home,0,1,1,1
+64,not hospitalised,care home,1,1,5,3
+64,not hospitalised,not care home,0,0,5,7
+65,hospitalised,care home,1,1,1,1
+65,hospitalised,not care home,0,0,14,29
+65,not hospitalised,care home,1,1,2,2
+65,not hospitalised,not care home,0,0,3,4
+66,hospitalised,care home,1,0,0,1
+66,hospitalised,care home,1,1,1,3
+66,hospitalised,not care home,0,0,13,32
+66,not hospitalised,care home,1,1,3,4
+66,not hospitalised,not care home,0,0,1,4
+67,hospitalised,care home,1,1,2,3
+67,hospitalised,not care home,0,0,12,28
+67,not hospitalised,care home,0,1,0,1
+67,not hospitalised,care home,1,0,1,0
+67,not hospitalised,care home,1,1,7,7
+67,not hospitalised,not care home,0,0,4,7
+68,hospitalised,care home,1,1,3,0
+68,hospitalised,not care home,0,0,24,25
+68,not hospitalised,care home,0,1,0,2
+68,not hospitalised,care home,1,0,0,1
+68,not hospitalised,care home,1,1,7,8
+68,not hospitalised,not care home,0,0,8,3
+69,hospitalised,care home,1,0,1,0
+69,hospitalised,care home,1,1,2,1
+69,hospitalised,not care home,0,0,23,29
+69,not hospitalised,care home,0,1,0,2
+69,not hospitalised,care home,1,1,10,10
+69,not hospitalised,not care home,0,0,5,9
+70,hospitalised,care home,1,0,0,2
+70,hospitalised,care home,1,1,1,3
+70,hospitalised,not care home,0,0,35,36
+70,not hospitalised,care home,1,1,5,13
+70,not hospitalised,not care home,0,0,5,7
+71,hospitalised,care home,0,1,1,0
+71,hospitalised,care home,1,0,1,0
+71,hospitalised,care home,1,1,3,3
+71,hospitalised,not care home,0,0,15,43
+71,not hospitalised,care home,1,1,8,5
+71,not hospitalised,not care home,0,0,4,8
+72,hospitalised,care home,0,1,0,1
+72,hospitalised,care home,1,1,3,2
+72,hospitalised,not care home,0,0,24,57
+72,not hospitalised,care home,0,1,0,1
+72,not hospitalised,care home,1,1,9,11
+72,not hospitalised,not care home,0,0,8,11
+73,hospitalised,care home,1,1,2,7
+73,hospitalised,not care home,0,0,27,40
+73,not hospitalised,care home,0,1,0,1
+73,not hospitalised,care home,1,1,16,18
+73,not hospitalised,not care home,0,0,4,9
+74,hospitalised,care home,1,1,2,10
+74,hospitalised,not care home,0,0,32,43
+74,not hospitalised,care home,0,1,2,2
+74,not hospitalised,care home,1,1,9,10
+74,not hospitalised,not care home,0,0,7,13
+75,hospitalised,care home,0,1,0,1
+75,hospitalised,care home,1,0,0,1
+75,hospitalised,care home,1,1,7,7
+75,hospitalised,not care home,0,0,33,62
+75,not hospitalised,care home,1,0,1,0
+75,not hospitalised,care home,1,1,16,19
+75,not hospitalised,not care home,0,0,5,14
+76,hospitalised,care home,0,1,1,2
+76,hospitalised,care home,1,0,0,1
+76,hospitalised,care home,1,1,2,4
+76,hospitalised,not care home,0,0,33,56
+76,not hospitalised,care home,0,1,0,2
+76,not hospitalised,care home,1,0,0,2
+76,not hospitalised,care home,1,1,16,17
+76,not hospitalised,not care home,0,0,15,15
+77,hospitalised,care home,0,1,1,1
+77,hospitalised,care home,1,0,1,0
+77,hospitalised,care home,1,1,5,14
+77,hospitalised,not care home,0,0,34,51
+77,not hospitalised,care home,1,0,1,0
+77,not hospitalised,care home,1,1,18,18
+77,not hospitalised,not care home,0,0,9,10
+78,hospitalised,care home,1,0,1,1
+78,hospitalised,care home,1,1,8,11
+78,hospitalised,not care home,0,0,36,54
+78,not hospitalised,care home,0,1,2,0
+78,not hospitalised,care home,1,1,30,27
+78,not hospitalised,not care home,0,0,10,9
+79,hospitalised,care home,1,0,2,3
+79,hospitalised,care home,1,1,6,4
+79,hospitalised,not care home,0,0,34,53
+79,not hospitalised,care home,0,1,0,1
+79,not hospitalised,care home,1,1,28,26
+79,not hospitalised,not care home,0,0,7,6
+80,hospitalised,care home,0,1,1,0
+80,hospitalised,care home,1,0,0,3
+80,hospitalised,care home,1,1,4,12
+80,hospitalised,not care home,0,0,29,68
+80,not hospitalised,care home,0,1,0,1
+80,not hospitalised,care home,1,0,0,1
+80,not hospitalised,care home,1,1,33,34
+80,not hospitalised,not care home,0,0,10,12
+81,hospitalised,care home,0,1,0,2
+81,hospitalised,care home,1,0,1,1
+81,hospitalised,care home,1,1,4,9
+81,hospitalised,not care home,0,0,35,46
+81,not hospitalised,care home,0,1,2,2
+81,not hospitalised,care home,1,0,1,1
+81,not hospitalised,care home,1,1,31,37
+81,not hospitalised,not care home,0,0,14,9
+82,hospitalised,care home,1,0,0,1
+82,hospitalised,care home,1,1,10,9
+82,hospitalised,not care home,0,0,31,47
+82,not hospitalised,care home,0,1,2,0
+82,not hospitalised,care home,1,0,1,0
+82,not hospitalised,care home,1,1,41,38
+82,not hospitalised,not care home,0,0,7,4
+83,hospitalised,care home,0,1,1,0
+83,hospitalised,care home,1,0,0,1
+83,hospitalised,care home,1,1,9,13
+83,hospitalised,not care home,0,0,40,50
+83,not hospitalised,care home,0,1,2,3
+83,not hospitalised,care home,1,1,46,45
+83,not hospitalised,not care home,0,0,8,8
+84,hospitalised,care home,0,1,0,1
+84,hospitalised,care home,1,0,0,1
+84,hospitalised,care home,1,1,8,9
+84,hospitalised,not care home,0,0,43,46
+84,not hospitalised,care home,0,1,3,2
+84,not hospitalised,care home,1,0,2,1
+84,not hospitalised,care home,1,1,48,42
+84,not hospitalised,not care home,0,0,5,12
+85,hospitalised,care home,0,1,0,1
+85,hospitalised,care home,1,0,1,0
+85,hospitalised,care home,1,1,7,7
+85,hospitalised,not care home,0,0,39,32
+85,not hospitalised,care home,0,1,3,2
+85,not hospitalised,care home,1,0,1,0
+85,not hospitalised,care home,1,1,55,55
+85,not hospitalised,not care home,0,0,5,7
+86,hospitalised,care home,1,0,1,2
+86,hospitalised,care home,1,1,6,7
+86,hospitalised,not care home,0,0,21,41
+86,not hospitalised,care home,0,1,3,1
+86,not hospitalised,care home,1,0,2,2
+86,not hospitalised,care home,1,1,68,41
+86,not hospitalised,not care home,0,0,10,9
+87,hospitalised,care home,1,0,0,1
+87,hospitalised,care home,1,1,14,6
+87,hospitalised,not care home,0,0,30,29
+87,not hospitalised,care home,0,1,4,3
+87,not hospitalised,care home,1,0,1,1
+87,not hospitalised,care home,1,1,55,34
+87,not hospitalised,not care home,0,0,7,9
+88,hospitalised,care home,1,0,1,1
+88,hospitalised,care home,1,1,8,9
+88,hospitalised,not care home,0,0,30,29
+88,not hospitalised,care home,0,1,2,3
+88,not hospitalised,care home,1,1,63,40
+88,not hospitalised,not care home,0,0,7,9
+89,hospitalised,care home,0,1,1,0
+89,hospitalised,care home,1,1,8,2
+89,hospitalised,not care home,0,0,23,32
+89,not hospitalised,care home,0,1,3,1
+89,not hospitalised,care home,1,0,3,0
+89,not hospitalised,care home,1,1,72,38
+89,not hospitalised,not care home,0,0,6,4
+90,hospitalised,care home,1,0,1,0
+90,hospitalised,care home,1,1,13,6
+90,hospitalised,not care home,0,0,22,18
+90,not hospitalised,care home,0,1,3,0
+90,not hospitalised,care home,1,0,4,0
+90,not hospitalised,care home,1,1,64,35
+90,not hospitalised,not care home,0,0,8,6
+91,hospitalised,care home,1,1,11,5
+91,hospitalised,not care home,0,0,20,21
+91,not hospitalised,care home,0,1,6,0
+91,not hospitalised,care home,1,0,0,1
+91,not hospitalised,care home,1,1,87,24
+91,not hospitalised,not care home,0,0,8,5
+92,hospitalised,care home,1,1,7,2
+92,hospitalised,not care home,0,0,19,15
+92,not hospitalised,care home,0,1,2,1
+92,not hospitalised,care home,1,0,1,0
+92,not hospitalised,care home,1,1,60,21
+92,not hospitalised,not care home,0,0,6,3
+93,hospitalised,care home,1,1,8,3
+93,hospitalised,not care home,0,0,9,9
+93,not hospitalised,care home,0,1,3,0
+93,not hospitalised,care home,1,0,1,0
+93,not hospitalised,care home,1,1,47,20
+93,not hospitalised,not care home,0,0,4,3
+94,hospitalised,care home,1,1,8,2
+94,hospitalised,not care home,0,0,19,11
+94,not hospitalised,care home,0,1,1,0
+94,not hospitalised,care home,1,0,1,0
+94,not hospitalised,care home,1,1,66,13
+94,not hospitalised,not care home,0,0,7,3
+95,hospitalised,care home,1,1,1,1
+95,hospitalised,not care home,0,0,7,8
+95,not hospitalised,care home,1,1,30,6
+95,not hospitalised,not care home,0,0,2,2
+96,hospitalised,care home,1,1,4,0
+96,hospitalised,not care home,0,0,5,4
+96,not hospitalised,care home,1,0,2,0
+96,not hospitalised,care home,1,1,36,8
+96,not hospitalised,not care home,0,0,1,2
+97,hospitalised,care home,1,1,1,0
+97,hospitalised,not care home,0,0,9,1
+97,not hospitalised,care home,1,1,18,4
+97,not hospitalised,not care home,0,0,4,0
+98,hospitalised,care home,1,1,3,0
+98,hospitalised,not care home,0,0,2,2
+98,not hospitalised,care home,1,1,9,2
+98,not hospitalised,not care home,0,0,0,3
+99,hospitalised,care home,1,1,2,1
+99,hospitalised,not care home,0,0,3,1
+99,not hospitalised,care home,1,0,2,0
+99,not hospitalised,care home,1,1,6,2
+100,hospitalised,care home,1,1,1,0
+100,hospitalised,not care home,0,0,2,1
+100,not hospitalised,care home,1,1,6,1
+100,not hospitalised,not care home,0,0,0,3
+101,hospitalised,care home,1,1,1,0
+101,hospitalised,not care home,0,0,0,1
+101,not hospitalised,care home,1,1,1,0
+101,not hospitalised,not care home,0,0,0,1
+102,not hospitalised,care home,1,1,2,0
+103,hospitalised,not care home,0,0,1,0
+103,not hospitalised,care home,1,1,3,0
+103,not hospitalised,not care home,0,0,1,1
+104,hospitalised,not care home,0,0,1,0
+106,not hospitalised,not care home,0,0,1,0
+107,not hospitalised,not care home,0,0,0,1
